@@ -19,6 +19,24 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
+module data_mem(
+    input [11:0] addr,
+    inout [7:0] data,
+    input clk,
+    input we
+    );
+    
+    reg [7:0] mem [4095:0];
+    initial $readmemh("screen_data.mem", mem);
+    
+    assign data = (we) ? data : mem[addr];
+    always @(posedge clk)
+        if(we)
+            mem[addr] <= data;
+    
+endmodule
+    
+
 module VGA_demo(
     input clk,
     output vga_hsync,
@@ -28,10 +46,6 @@ module VGA_demo(
     output [3:0] vga_b,
     output vga_locked
     );
-    
-    // Load screen memory
-    //reg[7:0] screen_mem [4095:0];
-    //initial $readmemh("screen_data.mem", screen_mem);
     
     wire vga_clk;
     vga_pll our_pll(
