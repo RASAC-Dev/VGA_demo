@@ -26,84 +26,56 @@ module vga(
     output reg [3:0] r,
     output reg [3:0] g,
     output reg [3:0] b,
+    output wire [9:0] x,
+    output wire [9:0] y,
     output locked
     );
     
-    // This should be passed in
-    // Load screen memory
-    reg[7:0] screen_mem [4095:0];
-    initial $readmemh("screen_data.mem", screen_mem);
+    // 640x480 timing
+    localparam HS_DATA = 640;
+    localparam HS_BLANK = 16;
+    localparam HS_PULSE = 96;
+    localparam HS_SECBLNK = 48;
+    localparam VS_DATA = 480;
+    localparam VS_BLANK = 10;
+    localparam VS_PULSE = 20;
+    localparam VS_SECBLNK = 33;
     
-    // Load font data to mem
-    reg[7:0] font_lut [4095:0];
-    initial $readmemb("font_data.mem", font_lut);
+    reg [9:0] px;
+    reg [9:0] py;
+    assign x = px;
+    assign y = py;
     
-    localparam ST_READ = 0;
-    localparam ST_FONTLOOKUP = 1;
-    localparam ST_FONTMUX = 2;
-    localparam ST_OUT = 3;
-                
-    reg[1:0] state = ST_READ;
+    wire [3:0] i_r;
+    wire [3:0] i_g;
+    wire [3:0] i_b;
+    shapes screen(i_r, i_g, i_b, x, y, vsync);
     
-    reg [9:0] px = 0;
-    reg [9:0] py = 0;
-
-    reg[7:0] char;
-    reg[7:0] fontrow;
-    reg pending_pix;
-    
-    wire[11:0] addr;
-    wire[11:0] fontaddr;
-                
-    // discard 4 bits of py (16 rows per char) and 3 bits of px (8 cols per char)
-    assign addr = {py[8:4], px[9:3]};
-    assign fontaddr = {char, py[3:0]};
-            
     always @ (posedge clk) begin
-        case(state)
-            ST_READ: begin
-                if(px < 640 && py < 480) begin
-                    char <= screen_mem[addr];
-                end
-                state <= ST_FONTLOOKUP;
-            end
-            ST_FONTLOOKUP: begin
-                fontrow <= font_lut[fontaddr];
-                state <= ST_FONTMUX; 
-            end
-            ST_FONTMUX: begin
-                pending_pix <= fontrow[px[2:0]];
-                state <= ST_OUT; 
-            end
-            ST_OUT: begin
-                hsync <= ~(px >= (640 + 16) && px < (640 + 16 + 96));
-                vsync <= ~(py >= (480 + 10) && py < (480 + 10 + 2));
-                if(px < 640 && py < 480 && pending_pix) begin
-                    r <= 4'hf;
-                    g <= 4'hf;
-                    b <= 4'hf;
-                end
-                else begin
-                    r <= 0;
-                    g <= 0;
-                    b <= 0;
-                end
-                if(px >= (640+16+96+48-1)) begin
-                    px <= 0;
-                    if(py >= (480+10+2+33-1)) begin
-                        py <= 0;
-                    end
-                    else begin
-                        py <= py + 1;
-                    end
-                end 
-                else begin
-                    px <= px + 1;
-                end
-            state <= ST_READ;
+        hsync <= ~(px >= (HS_DATA + HS_BLANK) && px < (HS_DATA + HS_BLANK + HS_PULSE));
+        vsync <= ~(py >= (VS_DATA + VS_BLANK) && py < (VS_DATA + VS_BLANK + VS_PULSE));
+        if(px < HS_DATA && py < VS_DATA) begin
+            r <= i_r;
+            g <= i_g;
+            b <= i_b;
         end
-        default:
-            state <= ST_READ;
-        endcase
+        else begin
+            r <= 0;
+            g <= 0;
+            b <= 0;
+        end
+        
+        if(px >= (HS_DATA + HS_BLANK + HS_PULSE + HS_SECBLNK-1)) begin
+            px <= 0;
+            if(py >= (VS_DATA + VS_BLANK + VS_PULSE + HS_SECBLNK-1)) begin
+                py <= 0;
+            end
+            else begin
+                py <= py + 1;
+            end
+        end
+        else begin
+            px <= px + 1;
+        end
     end
 endmodule

@@ -19,24 +19,6 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
-module data_mem(
-    input [11:0] addr,
-    inout [7:0] data,
-    input clk,
-    input we
-    );
-    
-    reg [7:0] mem [4095:0];
-    initial $readmemh("screen_data.mem", mem);
-    
-    assign data = (we) ? data : mem[addr];
-    always @(posedge clk)
-        if(we)
-            mem[addr] <= data;
-    
-endmodule
-    
-
 module VGA_demo(
     input clk,
     output vga_hsync,
@@ -55,6 +37,13 @@ module VGA_demo(
         .locked(locked)
     );
     
+    reg [3:0] r;
+    reg [3:0] g;
+    reg [3:0] b;
+    assign vga_r = r;
+    assign vga_g = g;
+    assign vga_b = b;
+    
     vga my_vga(
         .clk(vga_clk),
         .hsync(vga_hsync),
@@ -62,6 +51,8 @@ module VGA_demo(
         .r(vga_r),
         .g(vga_g),
         .b(vga_b),
+        .x(x),
+        .y(y),
         .locked(vga_locked)
     );
 endmodule
