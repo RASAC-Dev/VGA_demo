@@ -3,3 +3,5 @@ src/ip/*/*
 !src/ip/*/*.xci
 *.bit
 !builds/*
+vivado.log
+vivado.jou
